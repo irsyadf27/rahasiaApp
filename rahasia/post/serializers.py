@@ -4,6 +4,7 @@ from django.contrib.gis.geos import WKTReader
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from rest_framework import serializers, pagination
+from rest_framework.exceptions import NotFound, NotAcceptable
 from geopy.geocoders import Nominatim
 from geopy.exc import GeopyError
 from place.models import Place
@@ -52,13 +53,15 @@ class CommentCreateSerializer(serializers.ModelSerializer):
             try:
                 lokasi = Place.objects.filter(active=True, creator=user).first()
                 if not lokasi:
-                    raise serializers.ValidationError('Place not exists')
+                    raise NotFound('Place not exists')
+
                 validated_data['address'] = lokasi.address
                 validated_data['state'] = lokasi.state
                 validated_data['country'] = lokasi.country
                 validated_data['location'] = lokasi.location
             except ObjectDoesNotExist:
-                raise serializers.ValidationError('Place not exists')
+                raise NotFound('Place not exists')
+
         else:
             try:
                 addr = json.loads(str(validated_data['location']))
@@ -69,7 +72,7 @@ class CommentCreateSerializer(serializers.ModelSerializer):
                 point = "POINT(%s %s)" % (getter['lon'], getter['lat'])
                 validated_data['location'] = geos.fromstr(point)
             except (GeopyError, ValueError):
-                raise serializers.ValidationError('Error')
+                raise NotFound('Error')
 
         return Comment.objects.create(**validated_data)
         
@@ -88,13 +91,14 @@ class PostCreateSerializer(serializers.ModelSerializer):
             try:
                 lokasi = Place.objects.filter(active=True, creator=user).first()
                 if not lokasi:
-                    raise serializers.ValidationError('Place not exists')
+                    raise NotFound('Place not exists')
+                    
                 validated_data['address'] = lokasi.address
                 validated_data['state'] = lokasi.state
                 validated_data['country'] = lokasi.country
                 validated_data['location'] = lokasi.location
             except ObjectDoesNotExist:
-                raise serializers.ValidationError('Place not exists')
+                raise NotFound('Place not exists')
         else:
             try:
                 addr = json.loads(str(validated_data['location']))
@@ -105,7 +109,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
                 point = "POINT(%s %s)" % (getter['lon'], getter['lat'])
                 validated_data['location'] = geos.fromstr(point)
             except (GeopyError, ValueError):
-                raise serializers.ValidationError('Error')
+                raise NotFound('Error')
 
         return Post.objects.create(**validated_data)
 

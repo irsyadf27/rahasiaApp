@@ -1,25 +1,32 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets, permissions
+from django.db.models import Q
+from rest_framework import status, viewsets, permissions, serializers
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
-from rest_framework.generics import DestroyAPIView, ListCreateAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView, DestroyAPIView, ListCreateAPIView
+from rest_framework.exceptions import NotFound
 
 from message.permissions import ChatPermission, ThreadPermission
 #from post.pagination import PostLimitOffsetPagination, PostPageNumberPagination
 from message.models import MessageThread, MessageReply
-from message.serializers import ChatCreateSerializer, ReplyCreateSerializer
+from message.serializers import ChatListSerializer, ChatCreateSerializer, ReplyCreateSerializer
 
-class ChatCreateAPIView(ListCreateAPIView):
+class ChatListAPIView(ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ChatListSerializer
+    queryset = MessageThread.objects.all()
+
+    def get_queryset(self):
+        qs = MessageThread.objects.filter(Q(sender=self.request.user) | Q(recipient=self.request.user))
+        return qs
+
+class ChatCreateAPIView(CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ChatCreateSerializer
     queryset = MessageThread.objects.all()
 
-    def get_queryset(self):
-        qs = MessageThread.objects.filter(users__in=[self.request.user])
-        return qs
-
-    #def perform_create(self, serializer):
-    #    serializer.save()
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)
 
 class ChatDeleteAPIView(DestroyAPIView):
     queryset = MessageThread.objects.all()
@@ -34,8 +41,13 @@ class ChatReplyAPIView(ListCreateAPIView):
     #lookup_field = 'pk'
 
     def get_queryset(self):
-        qs = MessageReply.objects.filter(thread=self.kwargs['pk'])
+        try:
+            qs = MessageReply.objects.filter(thread=self.kwargs['pk'])
+        except MessageReply.DoesNotExist:
+            raise NotFound('Objects Not Found')
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(creator=self.request.user)
+        qs = MessageThread.objects.all()
+        thread_obj = get_object_or_404(qs, pk=self.kwargs['pk'])
+        serializer.save(thread=thread_obj, creator=self.request.user)

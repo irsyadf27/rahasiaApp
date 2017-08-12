@@ -11,15 +11,19 @@ import uuid
 
 class MessageThread(SoftDeletionModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    users = models.ManyToManyField(
-        User,
-        related_name='conversations',
-    )
+    #users = models.ManyToManyField(
+    #    User,
+    #    related_name='conversations',
+    #)
+    sender = models.ForeignKey(User, related_name='message_sender')
+    recipient = models.ForeignKey(User, related_name='message_recipient')
+
     unread_by = models.ManyToManyField(
         User,
-        related_name='unread_conversations',
+        related_name='message_unread',
         blank=True,
     )
+
     title = models.CharField(max_length=200, blank=True)
 
     content_type = models.ForeignKey(
@@ -47,9 +51,12 @@ class MessageThread(SoftDeletionModel):
 class MessageReply(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     thread = models.ForeignKey(MessageThread, related_name='messages')
-    creator = models.ForeignKey(User, related_name='messages')
+    creator = models.ForeignKey(User)
     content = models.CharField(max_length=250, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ['created_at']
+
+    def __unicode__(self):
+        return "%s: %s (%s)" % (self.creator, self.content, self.thread.title)

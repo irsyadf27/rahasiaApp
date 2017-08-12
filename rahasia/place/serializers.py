@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ParseError
 
 from django.contrib.gis import geos
 from django.contrib.gis.db import models as gis_models
@@ -28,7 +29,7 @@ class PlaceSerializer(serializers.ModelSerializer):
                 addr = validated_data['name'].encode('utf-8')
                 getter = geocoder.geocode(addr, timeout=5, addressdetails=True).raw
             except (GeopyError, ValueError, AttributeError) as e:
-                raise serializers.ValidationError(e)
+                raise ParseError(e)
         else:
             try:
                 '''addr = geos.wkt_regex.match(str(self.location)).group(3)
@@ -37,7 +38,7 @@ class PlaceSerializer(serializers.ModelSerializer):
                 addr = json.loads(str(validated_data['location']))
                 getter = geocoder.reverse("%s, %s" % (addr['coordinates'][1], addr['coordinates'][0]), timeout=5).raw
             except (GeopyError, ValueError, AttributeError) as e:
-                raise serializers.ValidationError(e)
+                raise ParseError(e)
 
         validated_data['address'] = getter['display_name']
         validated_data['state'] = getter['address']['state']
