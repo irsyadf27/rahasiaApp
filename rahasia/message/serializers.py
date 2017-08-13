@@ -65,6 +65,7 @@ class ChatCreateSerializer(serializers.ModelSerializer):
 
 class ReplyCreateSerializer(serializers.ModelSerializer):
     sender = serializers.SerializerMethodField()
+
     class Meta:
         model = MessageReply
         fields = ('pk', 'thread', 'sender', 'content', 'created_at', )

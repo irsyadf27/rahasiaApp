@@ -16,10 +16,10 @@ from geopy.exc import GeopyError
 
 from post.permissions import PostPermission
 from post.pagination import PostLimitOffsetPagination, PostPageNumberPagination
-from post.models import Post, Comment
+from post.models import Post, Comment, PostReaction
 from post.serializers import PostCreateSerializer, PostListSerializer, \
     PostUpdateSerializer, PostDetailSerializer, \
-    CommentSerializer, CommentCreateSerializer
+    CommentSerializer, CommentCreateSerializer, PostReactionSerializer
 
 import json
 
@@ -67,7 +67,7 @@ class PostDetailAPIView(RetrieveAPIView):
     queryset = Post.objects.all()
     serializer_class = PostDetailSerializer
     lookup_field = 'pk'
-    permission_classes = [permissions.IsAuthenticated, PostPermission]
+    permission_classes = [permissions.IsAuthenticated]
 
 class CommentCreateAPIView(ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -83,3 +83,12 @@ class CommentDeleteAPIView(RetrieveDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, PostPermission]
     serializer_class = CommentSerializer
     queryset = Comment.objects.all()
+
+
+class ReactionCreateAPIView(CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PostReactionSerializer
+    queryset = PostReaction.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

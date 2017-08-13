@@ -4,7 +4,7 @@ from rest_framework import routers
 from post.api import PostCreateAPIView, PostUpdateAPIView, \
 	PostDeleteAPIView, PostListAPIView, \
 	PostDetailAPIView, CommentCreateAPIView, \
-	CommentDeleteAPIView
+	CommentDeleteAPIView, ReactionCreateAPIView
 
 
 urlpatterns = [
@@ -16,4 +16,5 @@ urlpatterns = [
     url(r'^(?P<pk>[0-9A-Fa-f-]+)/delete/$', PostDeleteAPIView.as_view(), name='delete'),
     url(r'^(?P<pk>[0-9A-Fa-f-]+)/comment/$', CommentCreateAPIView.as_view(), name='create_comment'),
     url(r'^comment/(?P<pk>[0-9A-Fa-f-]+)/$', CommentDeleteAPIView.as_view(), name='delete_comment'),
+    url(r'^reaction/$', ReactionCreateAPIView.as_view(), name='reaction'),
 ]

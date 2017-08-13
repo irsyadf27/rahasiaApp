@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -8,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from softdelete.models import SoftDeletionModel
 import uuid
+from datetime import datetime
 
 class MessageThread(SoftDeletionModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -56,7 +59,15 @@ class MessageReply(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ['-created_at']
 
     def __unicode__(self):
         return "%s: %s (%s)" % (self.creator, self.content, self.thread.title)
+
+
+@receiver(post_save, sender=MessageReply)
+def update_time(sender, instance, created, **kwargs):
+    if created:
+        m = MessageThread.objects.get(pk=instance.thread.id)
+        m.updated_at = datetime.now()
+        m.save()

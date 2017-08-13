@@ -8,9 +8,8 @@ from django.contrib.gis import geos
 from django.contrib.gis.db import models as gis_models
 from django.contrib.gis.geos import WKTReader
 
-from notifications.signals import notify
 from post.utils import image_upload_handler
-
+from notifications.signals import notify
 from softdelete.models import SoftDeletionModel
 import uuid
 
@@ -68,13 +67,16 @@ class Comment(SoftDeletionModel):
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ['-created_at']
 
     def __unicode__(self):
         return self.comment
 
     def save(self, *args, **kwargs):
-        notify.send(self.creator, recipient=self.content_object.author, action_object=self.content_object, target=self, verb="commented on")
+        list_commented_users = Comment.objects.values_list('creator', flat=True).filter(post=self.post).exclude(creator=self.creator).distinct()
+        list_commented_users.append(self.post.creator.pk)
+        list_users = User.objects.filter(pk__in=list_commented_users).exclude(pk=self.creator.pk).distinct()
+        notify.send(self.creator, recipient=list_users, action_object=self.post, target=self, verb="commented on")
 
 class PostReaction(models.Model):
     LIKE = 'Like'
@@ -89,4 +91,4 @@ class PostReaction(models.Model):
         REACTION_TYPES, REACTION_TYPES))
 
     def __unicode__(self):
-        return "{}: {} {}".format(self.type, self.user.username, self.post.status)
+        return "{} {}".format(self.type, self.post.status)

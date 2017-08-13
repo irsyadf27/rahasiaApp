@@ -8,7 +8,7 @@ from rest_framework.exceptions import NotFound, NotAcceptable
 from geopy.geocoders import Nominatim
 from geopy.exc import GeopyError
 from place.models import Place
-from post.models import Post, Comment
+from post.models import Post, Comment, PostReaction
 #from post.pagination import PaginatedCommentSerializer
 import json
 import random
@@ -166,3 +166,15 @@ class PostDetailSerializer(serializers.ModelSerializer):
         page = paginator.paginate_queryset(c_qs, self.context['request'])
         serializer = CommentSerializer(page, many=True, context={'request': self.context['request']})
         return serializer.data
+
+class PostReactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostReaction
+        fields = ('post', 'type', )
+
+    def create(self, validated_data):
+        obj, created = PostReaction.objects.get_or_create(post=validated_data.get('post', None), user=validated_data.get('user', None), defaults={"type": validated_data.get('type', None)})
+        if not created:
+            obj.type = validated_data.get('type', None)
+            obj.save()
+        return obj
