@@ -9,7 +9,7 @@ from django.contrib.gis.db import models as gis_models
 from django.contrib.gis.geos import WKTReader
 
 from post.utils import image_upload_handler
-from notifications.signals import notify
+#from notifications.signals import notify
 from softdelete.models import SoftDeletionModel
 import uuid
 
@@ -72,12 +72,18 @@ class Comment(SoftDeletionModel):
     def __unicode__(self):
         return self.comment
 
+    '''
     def save(self, *args, **kwargs):
         list_commented_users = Comment.objects.values_list('creator', flat=True).filter(post=self.post).exclude(creator=self.creator).distinct()
-        list_commented_users.append(self.post.creator.pk)
+        if list_commented_users.exists():
+            list_commented_users = list(list_commented_users)
+            list_commented_users.append(self.post.creator.pk)
+        else:
+            list_commented_users = [self.post.creator.pk]
         list_users = User.objects.filter(pk__in=list_commented_users).exclude(pk=self.creator.pk).distinct()
         notify.send(self.creator, recipient=list_users, action_object=self.post, target=self, verb="commented on")
-
+    '''
+    
 class PostReaction(models.Model):
     LIKE = 'Like'
     DISLIKE = 'Dislike'

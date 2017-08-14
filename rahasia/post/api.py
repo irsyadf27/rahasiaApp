@@ -21,6 +21,8 @@ from post.serializers import PostCreateSerializer, PostListSerializer, \
     PostUpdateSerializer, PostDetailSerializer, \
     CommentSerializer, CommentCreateSerializer, PostReactionSerializer
 
+from notification.models import Notification
+from django.contrib.contenttypes.models import ContentType
 import json
 
 class PostCreateAPIView(CreateAPIView):
@@ -68,6 +70,14 @@ class PostDetailAPIView(RetrieveAPIView):
     serializer_class = PostDetailSerializer
     lookup_field = 'pk'
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Read Notif
+        ct = ContentType.objects.get_for_model(Post)
+        notif = Notification.objects.get(object_pk=self.kwargs['pk'], content_type=ct)
+        if notif:
+            notif.unread_by.remove(self.request.user)
+        return super(PostDetailAPIView, self).get_queryset()
 
 class CommentCreateAPIView(ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]

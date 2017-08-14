@@ -10,6 +10,9 @@ from geopy.exc import GeopyError
 from place.models import Place
 from post.models import Post, Comment, PostReaction
 #from post.pagination import PaginatedCommentSerializer
+
+from place.utils import Thing
+
 import json
 import random
 
@@ -49,7 +52,7 @@ class CommentCreateSerializer(serializers.ModelSerializer):
                 else:
                     validated_data['avatar'] = random.choice(list_avatars)
 
-        if not validated_data['location']:
+        if not validated_data.get('location', None):
             try:
                 lokasi = Place.objects.filter(active=True, creator=user).first()
                 if not lokasi:
@@ -61,18 +64,22 @@ class CommentCreateSerializer(serializers.ModelSerializer):
                 validated_data['location'] = lokasi.location
             except ObjectDoesNotExist:
                 raise NotFound('Place not exists')
-
         else:
             try:
-                addr = json.loads(str(validated_data['location']))
-                getter = geocoder.reverse("%s, %s" % (addr['coordinates'][1], addr['coordinates'][0])).raw
+                addr = geos.wkt_regex.match(str(validated_data.get('location', None))).group(3)
+                #wkt_r = WKTReader()
+                #a = wkt_r.read(addr)
+                loc = Thing(point=str(addr))
+                #addr = json.loads(str(validated_data['location']))
+                geocoder = Nominatim()
+                getter = geocoder.reverse("%s, %s" % (loc.latitude(), loc.longitude()), timeout=5).raw
                 validated_data['address'] = getter['display_name']
                 validated_data['state'] = getter['address']['state']
                 validated_data['country'] = getter['address']['country_code']
                 point = "POINT(%s %s)" % (getter['lon'], getter['lat'])
                 validated_data['location'] = geos.fromstr(point)
-            except (GeopyError, ValueError):
-                raise NotFound('Error')
+            except (GeopyError, ValueError) as e:
+                raise NotFound(e)
 
         return Comment.objects.create(**validated_data)
         
@@ -87,7 +94,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         if request and hasattr(request, "user"):
             user = request.user
 
-        if not validated_data['location']:
+        if not validated_data.get('location', None):
             try:
                 lokasi = Place.objects.filter(active=True, creator=user).first()
                 if not lokasi:
@@ -101,8 +108,13 @@ class PostCreateSerializer(serializers.ModelSerializer):
                 raise NotFound('Place not exists')
         else:
             try:
-                addr = json.loads(str(validated_data['location']))
-                getter = geocoder.reverse("%s, %s" % (addr['coordinates'][1], addr['coordinates'][0])).raw
+                addr = geos.wkt_regex.match(str(validated_data.get('location', None))).group(3)
+                #wkt_r = WKTReader()
+                #a = wkt_r.read(addr)
+                loc = Thing(point=str(addr))
+                #addr = json.loads(str(validated_data['location']))
+                geocoder = Nominatim()
+                getter = geocoder.reverse("%s, %s" % (loc.latitude(), loc.longitude()), timeout=5).raw
                 validated_data['address'] = getter['display_name']
                 validated_data['state'] = getter['address']['state']
                 validated_data['country'] = getter['address']['country_code']

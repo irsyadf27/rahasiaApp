@@ -8,6 +8,7 @@ from django.contrib.gis.geos import WKTReader
 from geopy.geocoders import Nominatim
 from geopy.exc import GeopyError, GeocoderTimedOut
 
+from place.utils import Thing
 from place.models import Place
 import json
 
@@ -24,7 +25,7 @@ class PlaceSerializer(serializers.ModelSerializer):
             user = request.user
 
         geocoder = Nominatim()
-        if not validated_data['location']:
+        if not validated_data.get('location', None):
             try:
                 addr = validated_data['name'].encode('utf-8')
                 getter = geocoder.geocode(addr, timeout=5, addressdetails=True).raw
@@ -34,11 +35,13 @@ class PlaceSerializer(serializers.ModelSerializer):
                 raise ParseError(e)
         else:
             try:
-                '''addr = geos.wkt_regex.match(str(self.location)).group(3)
-                wkt_r = WKTReader()
-                a = wkt_r.read(addr)'''
-                addr = json.loads(str(validated_data['location']))
-                getter = geocoder.reverse("%s, %s" % (addr['coordinates'][1], addr['coordinates'][0]), timeout=5).raw
+                addr = geos.wkt_regex.match(str(validated_data.get('location', None))).group(3)
+                #wkt_r = WKTReader()
+                #a = wkt_r.read(addr)
+                #addr = json.loads(str(validated_data['location']))
+                loc = Thing(point=str(addr))
+                #addr = json.loads(str(validated_data['location']))
+                getter = geocoder.reverse("%s, %s" % (loc.latitude(), loc.longitude()), timeout=5).raw
             except AttributeError:
                 raise NotFound("Place Not Found")
             except (GeopyError, ValueError) as e:
